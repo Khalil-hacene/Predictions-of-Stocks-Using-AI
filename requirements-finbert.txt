@@ -1,0 +1,3 @@
+# Optional dependencies for financial-domain FinBERT sentiment.
+transformers>=4.40,<5
+torch>=2.2

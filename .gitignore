@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.log
+.env
+.streamlit/secrets.toml
+models/*.keras
+models/*.pkl
+data/*
+!data/.gitkeep
+!models/.gitkeep
