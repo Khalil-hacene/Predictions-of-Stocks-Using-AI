@@ -1,42 +1,89 @@
-# AI Stock Analyzer
+# Stock Market Prediction Using AI
 
-Application Streamlit pédagogique pour étudier une action à partir des cours historiques, des métriques fondamentales accessibles, d'indicateurs techniques, d'actualités et de modèles prédictifs. Les prédictions sont incertaines et ne constituent pas un conseil financier.
+A Streamlit application for exploring a stock through company fundamentals, technical indicators, financial news sentiment, experimental forecasts, and time-based model evaluation. It is an educational analysis tool, not financial advice.
 
-## Objectif et cible
+## What the app does
 
-La cible est le rendement entre la clôture de la séance courante et celle de la séance suivante : `Close[t+1] / Close[t] - 1`. Cette cible permet de comparer des titres à des niveaux de prix différents; l'application convertit ensuite le rendement prévu en prix indicatif.
+Choose a listed company, historical period, forecast unit, and forecast duration in the sidebar, then select **Run analysis**. The app retrieves available market data and presents the results in five sections:
 
-Les données restent ordonnées dans le temps : entraînement, validation et test utilisent des fenêtres chronologiques, sans découpage aléatoire. Le scaler est ajusté sur les seules séances d'entraînement. Les scores des trois piliers ne sont ajoutés aux features qu'à partir d'instantanés locaux enregistrés au fil de l'utilisation; les valeurs actuelles ne sont jamais recopiées dans les dates anciennes. Les sources gratuites ne donnent pas l'historique complet des dates de publication et peuvent réviser les données : les instantanés datés réduisent le risque sans remplacer une base institutionnelle point-in-time.
+1. **Overview** — latest price information, fundamental and technical scores, news sentiment, and a combined three-pillar verdict.
+2. **Technical analysis** — historical price chart, moving averages, RSI and MACD, plus a graded technical score.
+3. **News & sentiment** — recent articles scored by FinBERT when available, with a simpler lexical fallback.
+4. **Forecast** — an experimental future closing-price estimate, uncertainty ranges, and an up/down estimate for the selected horizon.
+5. **Model evaluation** — chronological holdout and walk-forward results, baseline comparisons, and a cost-adjusted illustrative backtest.
 
-## Technologies et sources
+The stock selector includes more than 100 Nasdaq-100 constituents. Data is cached for 15 minutes; the interface shows the latest available market date and retrieval timestamps. Provider data can be delayed, missing, revised, or subject to quotas.
 
-- Python, Pandas, NumPy, scikit-learn, Plotly et Streamlit
-- `yfinance` pour cours et informations d'entreprise disponibles
-- Yahoo Finance puis Google News RSS pour les nouvelles, sans clé; NewsAPI en source de secours facultative (`NEWSAPI_KEY`)
-- FinBERT (`ProsusAI/finbert`) via Transformers/PyTorch pour le sentiment financier; petit lexique de secours si le modèle ne charge pas, avec fiabilité inférieure
-- TensorFlow/Keras facultatif pour le LSTM
+## Analysis methods
 
-Les champs et articles accessibles varient selon le titre, le fournisseur et les quotas. L'application indique les données manquantes et n'invente pas d'actualités.
+### Fundamental analysis
 
-## Architecture
+The fundamental score is a weighted average of available, graded company metrics on a 0–100 scale. It can include P/E, P/B, EV/EBITDA, a three-scenario discounted cash flow (DCF) estimate, profit margin, return on equity (ROE), return on invested capital (ROIC), debt, liquidity, interest coverage, and free cash flow (FCF). The table shows each metric's weight and flags missing values; unavailable metrics are excluded and the remaining weights are renormalized.
+
+When sector-peer observations are available, metrics can be graded by their percentile among those peers. If not, the app marks the grade as a heuristic rather than presenting a made-up sector ranking. The DCF is an illustrative estimate based on simplified pessimistic, base, and optimistic assumptions. It is omitted or flagged as unreliable for financial companies and companies with non-positive FCF. Multi-year trends are displayed only when enough financial statement history is available. A fiscal period-end date is not necessarily the date the information became public.
+
+### Technical analysis
+
+The app derives indicators from historical price and volume data, including SMA 20/50/200, MACD, RSI, ADX with directional indicators, Bollinger Bands, ATR, volume confirmation, recent support and resistance, and distance from the 52-week high. Directional indicators receive continuous grades based on their distance from reference levels; the score averages the available grades. RSI is displayed in oversold, neutral, or overbought zones, not as a simple bullish pass/fail test. ATR and support/resistance provide context rather than a directional vote. The chart can mark SMA 50/200 crossovers.
+
+### News and sentiment
+
+News is collected from Yahoo Finance and Google News RSS, with NewsAPI available as an optional fallback when `NEWSAPI_KEY` is configured. Undated, old, irrelevant, duplicate, and selected transaction-filler headlines are filtered. FinBERT (`ProsusAI/finbert`) scores article text when its dependencies and model are available; otherwise, a lightweight word-based fallback is used and marked as less reliable.
+
+Article scores are combined using recency, an indicative source-quality weight, and a reduced weight for non-English headlines. The aggregate score ranges from **−1 (negative) to +1 (positive)**. The app reports the article count and positive/neutral/negative breakdown, and shows the most influential headlines.
+
+### Combined verdict
+
+The Overview combines fundamental, technical, and sentiment scores into a **Bullish**, **Neutral**, or **Bearish** signal. Default weights are **40% fundamentals, 40% technical analysis, and 20% sentiment**; unavailable pillars are omitted and the remaining weights are normalized.
+
+If at least 100 dated historical snapshots exist for a stock, the app can estimate alternative weights from earlier snapshots and retain them only when they perform better than the defaults on a later chronological validation period. The displayed score strength measures distance from neutral; it is **not** a probability that the verdict will be correct.
+
+### Forecast
+
+The selected forecast horizon is converted into trading sessions (one week is treated as 5 sessions and one month as 21). A model estimates the return over that horizon from historical price features and converts it into an indicative closing price. The app shows an indicative 50% and 90% range, an estimated up/down split based on historical validation residuals, and local feature effects when available for the chosen model.
+
+The ranges use finite-sample conformal order statistics calibrated on walk-forward residuals. Because market errors are time-dependent, their coverage is approximate and not guaranteed. The probability split is empirical, not a promise of accuracy.
+
+### Model evaluation
+
+The evaluation uses chronological training, validation, and test periods, plus expanding walk-forward windows. It does not randomly shuffle dates. The model is compared with simple baselines, including an unchanged price, an always-up forecast, and a 20-session moving-average forecast. Reported measures include MAE, RMSE, MAPE, MASE, directional accuracy, and test sample count.
+
+An illustrative long-or-cash backtest also reports Sharpe ratio, maximum drawdown, and win rate. It assumes 10 basis points of fees and 5 basis points of slippage per position change. It does not model every real-world cost or constraint, such as taxes, dividends, liquidity, or market impact.
+
+The application can record one dated snapshot per stock and market session in `data/pillar_history.csv`. Historical pillar features are only available from the time the app begins recording them; current fundamentals or sentiment are not copied into older dates. Public data does not provide a complete, reliable point-in-time history of financial release dates, and later vendor revisions remain a limitation.
+
+## Data sources and dependencies
+
+- **Prices and company information:** Yahoo Finance through `yfinance`.
+- **News:** Yahoo Finance and Google News RSS; optional NewsAPI fallback.
+- **Sentiment:** FinBERT through Transformers and PyTorch, with a lexical fallback.
+- **Forecast models:** scikit-learn estimators; TensorFlow/Keras is optional for the LSTM model.
+- **Interface and charts:** Streamlit, Pandas, NumPy, and Plotly.
+
+Data availability varies by ticker and provider. Missing fields and unavailable analyses are reported rather than invented.
+
+## Project structure
 
 ```text
-app.py                       Interface Streamlit et orchestration
-src/data_loader.py           Cours, fondamentaux et actualités
-src/fundamental.py           Tableau et score fondamental explicable
-src/technical.py             Indicateurs, score et graphiques Plotly
-src/sentiment.py             FinBERT et repli lexical
-src/preprocessing.py         Features et cible sans décalage futur
-src/ml_models.py             Régression, Random Forest et LSTM facultatif
-src/prediction.py            Rendement prévu et prix indicatif
-src/evaluation.py            Choix par validation chronologique et test final indépendant
-src/stocks.py                Univers de plus de 100 actions Nasdaq-100
-src/scoring.py               Étiquettes de synthèse
+app.py                       Streamlit interface and app orchestration
+src/data_loader.py           Prices, company information, and news retrieval
+src/fundamental.py           Fundamental metrics, grades, and DCF scenarios
+src/technical.py             Technical indicators, score, and charts
+src/sentiment.py             FinBERT scoring and lexical fallback
+src/preprocessing.py         Time-ordered model features and targets
+src/ml_models.py             Model comparison and walk-forward residuals
+src/prediction.py            Forecast price, ranges, and direction estimate
+src/evaluation.py            Chronological holdout, walk-forward, and backtest
+src/pillar_history.py        Locally dated pillar-score snapshots
+src/scoring.py               Combined three-pillar verdict
+src/i18n.py                  English, French, and Arabic interface text
+src/stocks.py                Popular stock universe
+tests/                       Existing automated tests
 ```
 
-## Installation (PowerShell Windows)
+## Setup on Windows
 
-Dans le dossier du projet :
+Open PowerShell in the project folder and run:
 
 ```powershell
 py -3.11 -m venv .venv
@@ -45,50 +92,39 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-TensorFlow est optionnel car la compatibilité dépend de la plateforme et de la version Python. Installez-le séparément dans un environnement compatible pour activer le LSTM; sinon les modèles de référence fonctionnent seuls.
-
-FinBERT est également optionnel : les modèles PyTorch/Transformers sont volumineux. Pour l'installer localement, exécutez `pip install -r requirements-finbert.txt`. Sans ces paquets, le lexique de secours permet tout de même une analyse de sentiment simplifiée.
-
-Pour les actualités, définissez facultativement la clé dans la session PowerShell avant le lancement :
+FinBERT is optional because its model packages are large. To install its dependencies:
 
 ```powershell
-$env:NEWSAPI_KEY = "votre-cle-newsapi"
+pip install -r requirements-finbert.txt
 ```
 
-Ne partagez pas cette clé et ne l'ajoutez pas au code source. Yahoo Finance et Google News RSS sont utilisés sans clé; si ces deux sources ne renvoient aucun article, l'application indique que le sentiment n'a pas pu être calculé.
+TensorFlow is also optional. Install it separately in a Python environment supported by your TensorFlow version to enable the LSTM model.
 
-## Lancement
+To configure NewsAPI for the current PowerShell session, set the key before launching the app:
+
+```powershell
+$env:NEWSAPI_KEY = "your-newsapi-key"
+```
+
+Keep API keys private and out of source control. Yahoo Finance and Google News RSS do not require this key.
+
+## Run the app
 
 ```powershell
 streamlit run app.py
 ```
 
-Entrez un symbole (ex. `AAPL`), sélectionnez une période et cliquez sur **Analyze**. Une connexion internet est requise pour télécharger les données.
+Open the local URL printed by Streamlit (usually `http://localhost:8501`). An internet connection is needed to retrieve current data. Select a stock and history period, choose a forecast horizon, then click **Run analysis**.
 
-## Explication des méthodes
+## Limitations
 
-**Score fondamental (0–100)** : moyenne pondérée des multiples P/E, P/B et EV/EBITDA, d'une estimation DCF en trois scénarios, de la rentabilité, du ROE/ROIC, de l'endettement, de la liquidité, de la couverture des intérêts et du flux de trésorerie disponible. Chaque note utilise un classement par percentile si des observations de pairs sectoriels comparables sont fournies; sinon, une heuristique progressive est explicitement signalée. Les valeurs manquantes apparaissent dans le tableau avec leur avertissement et sont exclues du dénominateur pondéré. Le DCF utilise une croissance, un taux d'actualisation et une croissance terminale prudents; il est omis pour les banques et les flux de trésorerie disponibles non positifs. Les tendances ne s'affichent que si au moins trois périodes annuelles (ou environ trois années trimestrielles) existent. Les dates de fin de période ne sont pas des dates de publication.
+- Stock prices are uncertain; historical evaluation cannot guarantee future performance.
+- Free data may be delayed, incomplete, rate-limited, or revised.
+- Company ratios and DCF outputs depend on provider fields and simplifying assumptions.
+- Sector percentiles are shown only when comparable peer data is actually available; heuristic grades are not peer rankings.
+- Financial statement period dates do not establish when information was publicly released. Point-in-time historical fundamentals and news are not comprehensively available from the current providers.
+- Historical pillar snapshots accumulate only while the app is used. Early forecasts may therefore rely on price-derived features alone.
+- News sentiment depends on coverage, language detection, source weighting, and model availability; it is not a measure of the whole market.
+- Backtests simplify execution and omit some costs and market conditions. Past results do not predict future results.
 
-**Score technique (0–100)** : moyenne des notes continues par écart au niveau de référence pour les moyennes mobiles 20/50/200, MACD, RSI, ADX/+DI/−DI, position dans les bandes de Bollinger, confirmation par le volume et distance au plus haut annuel. Le RSI affiche survente, zone neutre ou surachat et n'est pas un test binaire. ATR, support et résistance sont montrés comme contexte de risque/niveaux, sans voter pour une direction. Le graphique marque les croisements SMA50/SMA200.
-
-**Verdict des trois analyses** : les scores sont combinés avec des poids par défaut 40 % fondamentaux, 40 % technique et 20 % sentiment. Avec au moins 100 instantanés datés, les poids fondés sur les corrélations d'entraînement ne sont utilisés que s'ils dépassent les poids par défaut sur une période de validation chronologique ultérieure. Les contributions et la force du score sont affichées; cette force n'est pas une probabilité de réussite.
-
-**Apprentissage ML à trois piliers** : chaque analyse lancée enregistre localement, une fois par séance boursière, les scores datés de fondamentaux, technique et sentiment dans `data/pillar_history.csv`. Cela construit des entrées historiques honnêtes sans recopier le score actuel dans le passé. À partir de 100 séances complètes (avec actualités), les modèles comparent les indicateurs de prix et les trois scores dans une validation chronologique; avant ce seuil, la prévision utilise seulement les données de prix. Les actualités et fondamentaux passés ne sont pas fournis par les sources actuelles, donc la collecte commence avec l’utilisation de l’application.
-
-**Sentiment** : les doublons et certains titres de remplissage sont filtrés; les articles sont pondérés selon leur fraîcheur et la qualité indicative de la source, avec un poids réduit pour les textes non anglais. FinBERT note les titres et descriptions. La moyenne pondérée, l'échelle −1 à +1, la répartition des labels, la tendance sur 30 jours et les titres les plus influents sont affichés. Le repli lexical est élémentaire et beaucoup moins fiable.
-
-**Modèles et intervalles** : régression linéaire, Random Forest et Gradient Boosting sont comparés sur des fenêtres chronologiques; un LSTM facultatif peut être ajouté. La prévision affiche des plages indicatives 50 % et 90 %, avec quantiles conformes en échantillon fini calibrés sur les résidus walk-forward; la dépendance temporelle rend leur couverture approximative. Une probabilité hausse/baisse et des effets locaux de variables complètent le prix prévu. Les effets ne sont pas disponibles pour tous les modèles.
-
-**Évaluation du modèle** : l'onglet dédié garde les séances les plus récentes pour un test final chronologique (65 % entraînement, 15 % validation, 20 % test) et ajoute des fenêtres walk-forward à entraînement croissant. À chaque fenêtre, la sélection utilise uniquement les données antérieures. Le modèle est comparé au cours inchangé, à une prédiction toujours haussière et à la moyenne mobile sur 20 séances. MAE, RMSE, exactitude directionnelle et taille de test sont affichées. Le backtest est long/liquidités, retire 10 points de base de frais et 5 points de base de glissement à chaque changement de position, et rapporte Sharpe, drawdown maximal et taux de réussite. Il reste pédagogique : fiscalité, dividendes, liquidité et impact de marché sont exclus.
-
-**Univers d’actions** : le menu propose plus de 100 symboles issus de la liste des sociétés de l’indice Nasdaq-100 publiée par Nasdaq. La composition de l’indice évolue; la liste incluse dans le projet doit être actualisée périodiquement depuis [la page Nasdaq-100](https://www.nasdaq.com/articles/global-indexes/nasdaq-100-index).
-
-## Limites
-
-- Les prix sont intrinsèquement imprévisibles; un test passé ne garantit pas les performances futures.
-- Les données gratuites peuvent être différées, limitées ou incomplètes.
-- Le sentiment dépend de la couverture d'articles, du quota API et du modèle NLP.
-- Les fondamentaux ponctuels ne sont pas intégrés au modèle historique faute d'instantanés datés; cela limite l'objectif de combiner toutes les catégories dans l'entraînement.
-- Les validations glissantes améliorent la robustesse, sans remplacer une évaluation sur d’autres titres et régimes de marché. Frais, dividendes, liquidité et événements extrêmes ne sont pas modélisés.
-- L’évaluation séparée utilise un test final chronologique; le résultat dépend du titre et de la période choisis et ne prédit pas les performances futures.
-- Toute prédiction reste expérimentale et ne doit pas être considérée comme un conseil financier.
+**Educational and experimental analysis only. Not financial advice.**
