@@ -6,5 +6,6 @@ scikit-learn>=1.4
 yfinance>=0.2.40
 requests>=2.31
 langdetect>=1.0.9
-# Optional FinBERT packages are listed separately in requirements-finbert.txt.
+transformers>=4.40,<5
+torch>=2.2
 # TensorFlow is optional; install separately if the platform supports it.
