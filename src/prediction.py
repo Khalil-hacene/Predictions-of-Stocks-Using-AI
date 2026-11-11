@@ -1,6 +1,7 @@
 """Create the next-session estimate and an empirical error range."""
 
 import numpy as np
+from src.ml_models import _lstm_sequences
 
 
 def _predict_lstm_return(frame, results):
@@ -13,10 +14,7 @@ def _predict_lstm_return(frame, results):
     scaled_features = results["scaler"].transform(features)
     window = 30
 
-    sequences = np.asarray(
-        [scaled_features[index - window : index] for index in range(window, len(features))]
-    )
-    sequence_targets = targets[window:]
+    _, sequences, sequence_targets = _lstm_sequences(scaled_features, targets, window)
 
     model = Sequential(
         [
@@ -68,7 +66,9 @@ def forecast_next_close(frame, results):
     band_90 = float(results.get("interval_90", results.get("error_band", 0.0)))
     lower_50, upper_50 = predicted_return - band_50, predicted_return + band_50
     lower_90, upper_90 = predicted_return - band_90, predicted_return + band_90
-    probability_up = float(np.mean(predicted_return + residuals > 0)) if len(residuals) else 0.5
+    probability_up = (
+        float(np.mean(predicted_return + residuals > 0)) if len(residuals) else 0.5
+    )
 
     return {
         "return": predicted_return,

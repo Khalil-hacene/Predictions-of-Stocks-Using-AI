@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 HISTORY_PATH = Path(__file__).resolve().parent.parent / "data" / "pillar_history.csv"
 HISTORY_COLUMNS = [
     "symbol",
@@ -70,9 +69,7 @@ def record_pillar_snapshot(
         ]
     )
     history = pd.concat([history, snapshot], ignore_index=True)
-    history = history.drop_duplicates(
-        subset=["symbol", "session_date"], keep="first"
-    )
+    history = history.drop_duplicates(subset=["symbol", "session_date"], keep="first")
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
     history.to_csv(HISTORY_PATH, index=False)
     return history

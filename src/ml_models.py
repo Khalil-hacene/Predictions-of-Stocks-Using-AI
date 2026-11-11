@@ -6,6 +6,22 @@ import pandas as pd
 from src.i18n import t
 
 
+def _lstm_sequences(features, targets, window=30):
+    """Build rolling input windows ending at each corresponding target date."""
+    features = np.asarray(features, dtype=float)
+    targets = np.asarray(targets, dtype=float)
+    if features.ndim != 2 or len(features) != len(targets):
+        raise ValueError("LSTM features and targets must have aligned rows.")
+    if window < 1:
+        raise ValueError("The LSTM window must be a positive number of sessions.")
+
+    target_indices = np.arange(window - 1, len(targets))
+    sequences = np.asarray(
+        [features[index - window + 1 : index + 1] for index in target_indices]
+    )
+    return target_indices, sequences, targets[target_indices]
+
+
 class _NumpyScaler:
     """Small scaler used when scikit-learn is unavailable."""
 
@@ -62,11 +78,11 @@ def _lstm_predict(scaled_features, targets, train_end, test_start, test_end):
     from tensorflow.keras.layers import LSTM, Dense, Dropout
 
     window = 30
-    target_indices = np.arange(window, test_end)
-    sequences = np.asarray(
-        [scaled_features[index - window : index] for index in target_indices]
+    # A target at row t is the future return from the close at t, so its input
+    # window must include features through t (the same convention as inference).
+    target_indices, sequences, sequence_targets = _lstm_sequences(
+        scaled_features[:test_end], targets[:test_end], window
     )
-    sequence_targets = targets[target_indices]
     training_mask = target_indices < train_end
     testing_mask = target_indices >= test_start
 
@@ -122,9 +138,7 @@ def _make_model_factories():
             ),
         }
     except Exception:
-        return _NumpyScaler, {
-            "Régression linéaire (NumPy)": _NumpyLinearRegression
-        }
+        return _NumpyScaler, {"Régression linéaire (NumPy)": _NumpyLinearRegression}
 
 
 def compare_models(frame, lang="fr"):
@@ -178,9 +192,7 @@ def compare_models(frame, lang="fr"):
             model = factory().fit(
                 scaled_features[:train_label_end], targets[:train_label_end]
             )
-            out_of_fold[name].extend(
-                model.predict(scaled_features[train_end:test_end])
-            )
+            out_of_fold[name].extend(model.predict(scaled_features[train_end:test_end]))
 
         if lstm_available:
             try:
@@ -207,7 +219,9 @@ def compare_models(frame, lang="fr"):
         if name in out_of_fold and len(out_of_fold[name]) == len(actual)
     ]
     if not valid_names:
-        raise ValueError("Aucun modèle n’a pu être évalué sur les fenêtres temporelles.")
+        raise ValueError(
+            "Aucun modèle n’a pu être évalué sur les fenêtres temporelles."
+        )
 
     predictions = {
         name: np.asarray(out_of_fold[name], dtype=float)
@@ -250,8 +264,21 @@ def compare_models(frame, lang="fr"):
                 plus, minus = last_features.copy(), last_features.copy()
                 plus[0, index] += 0.5
                 minus[0, index] -= 0.5
-                effect = (float(best_model.predict(plus)[0]) - float(best_model.predict(minus)[0])) / 2
-                feature_effects.append({"feature": name, "effect": effect, "direction": "up" if effect > 1e-10 else "down" if effect < -1e-10 else "neutral"})
+                effect = (
+                    float(best_model.predict(plus)[0])
+                    - float(best_model.predict(minus)[0])
+                ) / 2
+                feature_effects.append(
+                    {
+                        "feature": name,
+                        "effect": effect,
+                        "direction": (
+                            "up"
+                            if effect > 1e-10
+                            else "down" if effect < -1e-10 else "neutral"
+                        ),
+                    }
+                )
             feature_effects.sort(key=lambda item: abs(item["effect"]), reverse=True)
         except Exception:
             feature_effects = []
@@ -272,8 +299,11 @@ def compare_models(frame, lang="fr"):
                 t(lang, "table_model"): display_names[name],
                 t(lang, "metric_mae"): f"{values['MAE']:.4f}",
                 t(lang, "metric_rmse"): f"{values['RMSE']:.4f}",
-                t(lang, "metric_direction"):
-                    f"{accuracy:.1f}%" if np.isfinite(accuracy) else t(lang, "not_available"),
+                t(lang, "metric_direction"): (
+                    f"{accuracy:.1f}%"
+                    if np.isfinite(accuracy)
+                    else t(lang, "not_available")
+                ),
             }
         )
 
@@ -285,12 +315,15 @@ def compare_models(frame, lang="fr"):
             return 0.0
         # Finite-sample split-conformal order statistic. Walk-forward residuals
         # are dependent in time, so coverage remains approximate in markets.
-        rank=min(len(absolute_residuals), max(1, int(np.ceil((len(absolute_residuals)+1)*coverage))))
-        return float(absolute_residuals[rank-1])
+        rank = min(
+            len(absolute_residuals),
+            max(1, int(np.ceil((len(absolute_residuals) + 1) * coverage))),
+        )
+        return float(absolute_residuals[rank - 1])
 
-    radius_50=conformal_radius(.50)
-    radius_90=conformal_radius(.90)
-    error_band=radius_90
+    radius_50 = conformal_radius(0.50)
+    radius_90 = conformal_radius(0.90)
+    error_band = radius_90
 
     return {
         "metrics": pd.DataFrame(table_rows),
@@ -321,6 +354,7 @@ def _has_tensorflow():
     """Check whether the optional LSTM dependency is available."""
     try:
         import tensorflow  # noqa: F401
+
         return True
     except Exception:
         return False

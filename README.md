@@ -18,13 +18,13 @@ The stock selector includes more than 100 Nasdaq-100 constituents. Data is cache
 
 ### Fundamental analysis
 
-The fundamental score is a weighted average of available, graded company metrics on a 0–100 scale. It can include P/E, P/B, EV/EBITDA, a three-scenario discounted cash flow (DCF) estimate, profit margin, return on equity (ROE), return on invested capital (ROIC), debt, liquidity, interest coverage, and free cash flow (FCF). The table shows each metric's weight and flags missing values; unavailable metrics are excluded and the remaining weights are renormalized.
+The fundamental score is a weighted average of available, graded company metrics on a 0–100 scale. It can include P/E, P/B, EV/EBITDA, a three-scenario discounted cash flow (DCF) estimate, profit margin, return on equity (ROE), return on capital employed (ROCE), debt, liquidity, interest coverage, and free cash flow yield (FCF divided by market capitalization). The overview currently shows a compact metric/value table and a separate calculation explanation; unavailable metrics are excluded and the remaining weights are renormalized.
 
 When sector-peer observations are available, metrics can be graded by their percentile among those peers. If not, the app marks the grade as a heuristic rather than presenting a made-up sector ranking. The DCF is an illustrative estimate based on simplified pessimistic, base, and optimistic assumptions. It is omitted or flagged as unreliable for financial companies and companies with non-positive FCF. Multi-year trends are displayed only when enough financial statement history is available. A fiscal period-end date is not necessarily the date the information became public.
 
 ### Technical analysis
 
-The app derives indicators from historical price and volume data, including SMA 20/50/200, MACD, RSI, ADX with directional indicators, Bollinger Bands, ATR, volume confirmation, recent support and resistance, and distance from the 52-week high. Directional indicators receive continuous grades based on their distance from reference levels; the score averages the available grades. RSI is displayed in oversold, neutral, or overbought zones, not as a simple bullish pass/fail test. ATR and support/resistance provide context rather than a directional vote. The chart can mark SMA 50/200 crossovers.
+The app derives SMA 20/50/200, MACD, RSI, ADX with directional indicators, Bollinger Bands, ATR, volume, support/resistance, and distance from the 52-week high. The current technical score grades price versus SMA 20/50/200, MACD versus its signal, and RSI momentum; it averages the available continuous grades. RSI is displayed in oversold, neutral, or overbought zones. ATR and support/resistance provide context rather than a directional vote. The chart can mark SMA 50/200 crossovers.
 
 ### News and sentiment
 
@@ -40,7 +40,7 @@ If at least 100 dated historical snapshots exist for a stock, the app can estima
 
 ### Forecast
 
-The selected forecast horizon is converted into trading sessions (one week is treated as 5 sessions and one month as 21). A model estimates the return over that horizon from historical price features and converts it into an indicative closing price. The app shows an indicative 50% and 90% range, an estimated up/down split based on historical validation residuals, and local feature effects when available for the chosen model.
+The selected forecast horizon is converted into trading sessions (one week is treated as 5 sessions and one month as 21). A model estimates the return over that horizon from historical price features and converts it into an indicative closing price. The app shows an indicative 50% and 90% range and an estimated up/down split based on historical validation residuals. For compatible models, local feature effects are estimated by small perturbations around the current observation; they are not SHAP values or causal explanations.
 
 The ranges use finite-sample conformal order statistics calibrated on walk-forward residuals. Because market errors are time-dependent, their coverage is approximate and not guaranteed. The probability split is empirical, not a promise of accuracy.
 
@@ -61,6 +61,22 @@ The application can record one dated snapshot per stock and market session in `d
 - **Interface and charts:** Streamlit, Pandas, NumPy, and Plotly.
 
 Data availability varies by ticker and provider. Missing fields and unavailable analyses are reported rather than invented.
+
+## Run the checks and format the code
+
+Run the offline test suite and a syntax check from the project folder:
+
+```powershell
+python -m unittest discover -s tests -v
+python -m compileall -q app.py src tests
+```
+
+The Python files use Black with the settings in `pyproject.toml`. After installing Black in the development environment, check or apply formatting with:
+
+```powershell
+python -m black --check app.py src tests
+python -m black app.py src tests
+```
 
 ## Project structure
 
@@ -92,10 +108,10 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-FinBERT is optional because its model packages are large. To install its dependencies:
+The main `requirements.txt` installs the Transformers and PyTorch libraries used by FinBERT. FinBERT's model weights are downloaded the first time sentiment analysis runs, so that first run needs network access and may take longer. If an older deployment showed that FinBERT was missing, rebuild or redeploy it from the commit that includes these dependencies.
 
 ```powershell
-pip install -r requirements-finbert.txt
+pip install -r requirements.txt
 ```
 
 TensorFlow is also optional. Install it separately in a Python environment supported by your TensorFlow version to enable the LSTM model.

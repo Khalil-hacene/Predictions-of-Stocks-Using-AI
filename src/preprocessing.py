@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 
-
 FEATURE_COLUMNS = [
     "Close",
     "Volume",
@@ -40,17 +39,18 @@ def make_feature_frame(indicators, horizon=1):
     # Skip indicators with too little history so short selected periods can still
     # produce a model; never impute unavailable market history as a real value.
     available_columns = [
-        column for column in FEATURE_COLUMNS
+        column
+        for column in FEATURE_COLUMNS
         if column in indicators.columns and indicators[column].notna().sum() >= 30
     ]
     if not available_columns:
-        available_columns = [column for column in ("Close", "Volume", "Returns") if column in indicators]
+        available_columns = [
+            column for column in ("Close", "Volume", "Returns") if column in indicators
+        ]
     features = indicators[available_columns].copy()
     current_features = features.iloc[-1].copy()
 
-    features["Target"] = (
-        indicators["Close"].shift(-horizon) / indicators["Close"] - 1
-    )
+    features["Target"] = indicators["Close"].shift(-horizon) / indicators["Close"] - 1
     features = features.replace([np.inf, -np.inf], np.nan).dropna()
 
     # The newest session has no next-session label, so it is only used at inference.
@@ -58,7 +58,9 @@ def make_feature_frame(indicators, horizon=1):
     features.attrs["current_close"] = float(current_features["Close"])
     features.attrs["horizon"] = horizon
     features.attrs["feature_columns"] = available_columns
-    features.attrs["inference_sequence_features"] = indicators[available_columns].tail(30).to_numpy(dtype=float)
+    features.attrs["inference_sequence_features"] = (
+        indicators[available_columns].tail(30).to_numpy(dtype=float)
+    )
     return features
 
 
@@ -93,9 +95,7 @@ def make_pillar_feature_frame(
     ticker_history = ticker_history.drop_duplicates("session_date", keep="first")
     ticker_history = ticker_history.set_index("session_date")
 
-    session_dates = pd.Series(
-        features.index.strftime("%Y-%m-%d"), index=features.index
-    )
+    session_dates = pd.Series(features.index.strftime("%Y-%m-%d"), index=features.index)
     feature_map = {
         "FundamentalScore": "fundamental_score",
         "TechnicalScore": "technical_score",
