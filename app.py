@@ -676,6 +676,7 @@ if "analysis_data" in st.session_state:
         if forecast_error is not None:
             st.warning(t(lang, "forecast_error", error=forecast_error))
         elif forecast is not None and results is not None:
+            st.caption(t(lang, "model_used", model=forecast["model"]))
             price_column, predicted_column, change_column = st.columns(3)
             price_column.metric(
                 t(lang, "forecast_current_price"),

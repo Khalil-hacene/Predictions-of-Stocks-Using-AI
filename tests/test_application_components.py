@@ -258,6 +258,11 @@ class NewsAndDataTests(unittest.TestCase):
 
 
 class ForecastAndFeatureTests(unittest.TestCase):
+    def test_forecast_model_name_is_available_in_all_interface_languages(self):
+        for language in ("en", "fr", "ar"):
+            message = t(language, "model_used", model="Random Forest")
+            self.assertIn("Random Forest", message)
+
     def test_model_comparison_uses_chronological_folds_and_purges_horizon_labels(self):
         dates = pd.bdate_range("2024-01-01", periods=240)
         feature = np.arange(240, dtype=float)
