@@ -530,9 +530,10 @@ TEXT["fr"].update(
         "boosting": "Gradient boosting",
         "forecast_description": (
             "Trois modèles de base (régression linéaire, forêt aléatoire et gradient boosting; "
-            "LSTM facultatif) apprennent les historiques datés. Avant 100 séances complètes, "
-            "l’entraînement utilise les indicateurs techniques. Dès que les historiques sont "
-            "collectés, il inclut aussi les scores fondamentaux et le sentiment du jour. Les "
+            "LSTM facultatif) apprennent les historiques datés. Un minimum de 20 séances "
+            "exploitables est requis pour un horizon d’un jour; les horizons plus longs en "
+            "demandent davantage. Avant ce seuil, l’entraînement utilise les indicateurs "
+            "techniques. Ensuite, il inclut aussi les scores fondamentaux et le sentiment. Les "
             "modèles sont comparés sur plusieurs fenêtres chronologiques et à une référence "
             "sans variation; les scores actuels ne sont jamais recopiés dans le passé."
         ),
@@ -541,7 +542,8 @@ TEXT["fr"].update(
         "signal_agreement": "d’accord",
         "analysis_pillars": "analyses disponibles",
         "pillar_model_collecting": (
-            "Collecte des historiques des trois piliers : {count}/{needed} séances exploitables. "
+            "Collecte des historiques des trois piliers : {count}/{needed} séances exploitables "
+            "pour l’horizon choisi. "
             "En attendant, la prévision ML utilise les indicateurs techniques historiques. "
             "Une séance est enregistrée quand vous lancez l’analyse."
         ),
@@ -549,7 +551,7 @@ TEXT["fr"].update(
             "L’historique des trois piliers est suffisant, mais un score fondamental ou le "
             "sentiment manque pour la séance actuelle. La prévision reste basée sur les cours."
         ),
-        "pillar_model_ready": "Prévision ML entraînée avec les trois piliers sur {count} séances datées.",
+        "pillar_model_ready": "Prévision ML entraînée avec les trois piliers sur {count} séances datées. Avec cet historique réduit, le choix du modèle reste plus incertain.",
         "pillar_history_save_error": "Impossible d’enregistrer l’historique local : {error}",
         "forecast_return": "Rendement estimé",
         "forecast_details": "Détails et validation du modèle",
@@ -587,9 +589,10 @@ TEXT["en"].update(
         "boosting": "Gradient boosting",
         "forecast_description": (
             "Three core models (linear regression, random forest, and gradient boosting; "
-            "optional LSTM) learn from dated history. Before 100 complete sessions are "
-            "collected, training uses historical technical indicators. Once snapshots are "
-            "available, it also uses that session’s fundamental and sentiment scores. Models "
+            "optional LSTM) learn from dated history. A one-day horizon needs at least 20 "
+            "usable sessions; longer horizons need more. Before that threshold, training uses "
+            "historical technical indicators. Once enough dated snapshots are available, it "
+            "also uses fundamental and sentiment scores. Models "
             "are compared across chronological windows and against a no-change baseline; "
             "current scores are never copied into the past."
         ),
@@ -598,7 +601,8 @@ TEXT["en"].update(
         "signal_agreement": "agreement",
         "analysis_pillars": "available analyses",
         "pillar_model_collecting": (
-            "Collecting dated history for all three pillars: {count}/{needed} usable sessions. "
+            "Collecting dated history for all three pillars: {count}/{needed} usable sessions "
+            "for the selected horizon. "
             "Until then, the ML forecast uses historical technical indicators. A session is "
             "recorded when you run the analysis."
         ),
@@ -606,7 +610,7 @@ TEXT["en"].update(
             "There is enough three-pillar history, but the current session is missing a "
             "fundamental score or news sentiment. The forecast stays price-based."
         ),
-        "pillar_model_ready": "ML forecast trained with all three pillars across {count} dated sessions.",
+        "pillar_model_ready": "ML forecast trained with all three pillars across {count} dated sessions. With this smaller history, model selection is more uncertain.",
         "pillar_history_save_error": "Could not save the local history: {error}",
         "forecast_return": "Estimated return",
         "forecast_details": "Model details and validation",
@@ -672,7 +676,7 @@ TEXT["ar"] = {
     "finbert_error_details": "تفاصيل خطأ تحميل FinBERT",
     "lexical_warning": "التحليل البديل يستخدم كلمات وقواعد بسيطة، وهو أقل موثوقية من FinBERT.",
     "forecast_title": "تقدير تجريبي لإغلاق الجلسة التالية",
-    "forecast_description": "تتعلم النماذج من البيانات التاريخية المؤرخة. قبل جمع 100 جلسة مكتملة، يعتمد التدريب على المؤشرات الفنية التاريخية. بعد توفر السجلات، تُضاف درجات الأساسيات والمعنويات لتلك الجلسات. لا تُنسخ درجات اليوم إلى الماضي.",
+    "forecast_description": "تتعلم النماذج من البيانات التاريخية المؤرخة. يحتاج أفق اليوم الواحد إلى 20 جلسة صالحة على الأقل، وتحتاج الآفاق الأطول إلى جلسات أكثر. قبل بلوغ الحد المطلوب، يعتمد التدريب على المؤشرات الفنية التاريخية؛ وبعد توفر سجل كافٍ تُضاف درجات التحليل الأساسي والمشاعر. لا تُنسخ درجات اليوم إلى الماضي.",
     "spinner": "جارٍ تدريب النماذج ومقارنتها عبر فترات زمنية…",
     "forecast_price": "السعر التقديري عند الإغلاق القادم",
     "model_used": "النموذج المستخدم لهذا التوقع: {model}.",
@@ -804,9 +808,9 @@ TEXT["ar"] = {
     "three_pillar_signal": "خلاصة التحليلات الثلاثة",
     "signal_agreement": "نسبة الاتفاق",
     "analysis_pillars": "من التحليلات المتاحة",
-    "pillar_model_collecting": "جارٍ جمع السجل المؤرخ للتحليلات الثلاثة: {count}/{needed} جلسة صالحة. حتى ذلك الحين يعتمد توقع التعلم الآلي على المؤشرات الفنية التاريخية. سجّل جلسة عند تشغيل التحليل.",
+    "pillar_model_collecting": "جارٍ جمع السجل المؤرخ للتحليلات الثلاثة: {count}/{needed} جلسة صالحة للأفق المختار. حتى ذلك الحين يعتمد توقع التعلم الآلي على المؤشرات الفنية التاريخية. سجّل جلسة عند تشغيل التحليل.",
     "pillar_model_missing_signal": "السجل كافٍ لكن تنقص درجة الأساسيات أو معنويات الأخبار في الجلسة الحالية؛ سيبقى التوقع معتمدًا على الأسعار.",
-    "pillar_model_ready": "تم تدريب توقع التعلم الآلي على التحليلات الثلاثة عبر {count} جلسة مؤرخة.",
+    "pillar_model_ready": "تم تدريب توقع التعلم الآلي على التحليلات الثلاثة عبر {count} جلسة مؤرخة. ومع قِصر السجل، يظل اختيار النموذج أقل يقينًا.",
     "pillar_history_save_error": "تعذر حفظ السجل المحلي: {error}",
     "forecast_return": "العائد المتوقع",
     "forecast_details": "تفاصيل النموذج والتحقق",

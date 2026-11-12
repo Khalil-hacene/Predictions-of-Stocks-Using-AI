@@ -148,12 +148,17 @@ def compare_models(frame, lang="fr"):
     row_count = len(frame)
     horizon = max(1, int(frame.attrs.get("horizon", 1)))
 
-    min_train = max(60, int(row_count * 0.50))
+    if row_count < 75:
+        # Smaller pillar-history samples can be used experimentally, while
+        # retaining a minimum training window after purging future labels.
+        min_train = max(8 + horizon, int(row_count * 0.50))
+    else:
+        min_train = max(60, int(row_count * 0.50), 8 + horizon)
     fold_count = min(5, (row_count - min_train) // 5)
-    if fold_count < 3:
+    if fold_count < 2:
         raise ValueError(
             "Historique trop court pour une validation temporelle fiable. "
-            "Choisissez au moins environ un an de données."
+            "Choisissez une période plus longue ou un horizon plus court."
         )
 
     fold_size = (row_count - min_train) // fold_count
@@ -178,7 +183,7 @@ def compare_models(frame, lang="fr"):
         train_label_end = train_end - horizon
         test_end = min(row_count, train_end + fold_size)
         test_size = test_end - train_end
-        if test_size < 5 or train_label_end < 60:
+        if test_size < 5 or train_label_end < 8:
             continue
 
         scaler = scaler_factory().fit(features[:train_label_end])

@@ -30,6 +30,17 @@ PILLAR_FEATURE_COLUMNS = [
 ]
 
 
+def minimum_pillar_rows(horizon=1):
+    """Minimum labelled rows for two chronological model-validation windows.
+
+    The threshold is 20 for a one-session forecast. Longer horizons need extra
+    rows because training labels are purged by the forecast horizon and each
+    validation window must retain at least five observations.
+    """
+    horizon = max(1, int(horizon))
+    return max(20, 18 + horizon)
+
+
 def make_feature_frame(indicators, horizon=1):
     """Create labelled history and preserve the newest row for live inference."""
     horizon = int(horizon)

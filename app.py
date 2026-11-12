@@ -15,7 +15,11 @@ from src.data_loader import (
 from src.fundamental import analyze_fundamentals
 from src.technical import add_indicators, analyze_technical, technical_chart
 from src.sentiment import analyze_news
-from src.preprocessing import make_feature_frame, make_pillar_feature_frame
+from src.preprocessing import (
+    make_feature_frame,
+    make_pillar_feature_frame,
+    minimum_pillar_rows,
+)
 from src.pillar_history import load_pillar_history, record_pillar_snapshot
 from src.ml_models import compare_models
 from src.prediction import forecast_next_close
@@ -344,25 +348,27 @@ if "analysis_data" in st.session_state:
     results = None
     pillar_ml_ready = False
     pillar_status = t(lang, "unavailable")
+    pillar_minimum = minimum_pillar_rows(forecast_horizon)
     forecast_error = None
     with st.spinner(t(lang, "spinner")):
         try:
             price_features = make_feature_frame(enriched, horizon=forecast_horizon)
             current_pillar_features = pillar_features.attrs["current_features"]
             pillar_ml_ready = (
-                len(pillar_features) >= 100 and current_pillar_features.notna().all()
+                len(pillar_features) >= pillar_minimum
+                and current_pillar_features.notna().all()
             )
             if pillar_ml_ready:
                 features = pillar_features
                 pillar_status = t(lang, "pillar_model_ready", count=len(features))
             else:
                 features = price_features
-                if len(pillar_features) < 100:
+                if len(pillar_features) < pillar_minimum:
                     pillar_status = t(
                         lang,
                         "pillar_model_collecting",
                         count=len(pillar_features),
-                        needed=100,
+                        needed=pillar_minimum,
                     )
                 else:
                     pillar_status = t(lang, "pillar_model_missing_signal")
@@ -677,6 +683,7 @@ if "analysis_data" in st.session_state:
             st.warning(t(lang, "forecast_error", error=forecast_error))
         elif forecast is not None and results is not None:
             st.caption(t(lang, "model_used", model=forecast["model"]))
+            st.caption(pillar_status)
             price_column, predicted_column, change_column = st.columns(3)
             price_column.metric(
                 t(lang, "forecast_current_price"),
