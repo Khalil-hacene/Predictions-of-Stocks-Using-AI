@@ -15,13 +15,9 @@ from src.data_loader import (
 from src.fundamental import analyze_fundamentals
 from src.technical import add_indicators, analyze_technical, technical_chart
 from src.sentiment import analyze_news
-from src.preprocessing import (
-    make_feature_frame,
-    make_pillar_feature_frame,
-    minimum_pillar_rows,
-)
+import src.preprocessing as preprocessing
+import src.ml_models as ml_models
 from src.pillar_history import load_pillar_history, record_pillar_snapshot
-from src.ml_models import compare_models
 from src.prediction import forecast_next_close
 from src.scoring import combine_analysis_signals, overall_view
 from src.i18n import t
@@ -31,6 +27,13 @@ from src.stocks import STOCKS
 # Streamlit hot-reloads this entry point, but imported translation modules can stay
 # cached. Reload the small dictionary so language changes always use current strings.
 import src.i18n as i18n
+
+preprocessing = importlib.reload(preprocessing)
+ml_models = importlib.reload(ml_models)
+make_feature_frame = preprocessing.make_feature_frame
+make_pillar_feature_frame = preprocessing.make_pillar_feature_frame
+minimum_pillar_rows = preprocessing.minimum_pillar_rows
+compare_models = ml_models.compare_models
 
 i18n = importlib.reload(i18n)
 t = i18n.t
